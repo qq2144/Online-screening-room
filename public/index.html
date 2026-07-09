@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>私人放映厅</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <!-- Login gate -->
+    <div id="gate" class="gate">
+      <div class="gate-card">
+        <h1>🎬 私人放映厅</h1>
+        <label>你的昵称
+          <input id="name" placeholder="比如：宝贝" maxlength="24" />
+        </label>
+        <label>房间号
+          <input id="room" placeholder="两人约定同一个房间号" value="us" />
+        </label>
+        <label>密码
+          <input id="password" type="password" placeholder="进入密码" />
+        </label>
+        <button id="enter">进入放映厅</button>
+        <p id="gate-error" class="error"></p>
+      </div>
+    </div>
+
+    <!-- Main app -->
+    <div id="app" class="app hidden">
+      <header>
+        <span class="brand">🎬 放映厅 · <span id="room-label"></span></span>
+        <span id="members" class="members"></span>
+      </header>
+
+      <div class="main">
+        <section class="stage">
+          <video id="video" controls playsinline></video>
+          <div id="overlay" class="overlay hidden">
+            <button id="start-btn">▶ 一起开始</button>
+            <p>点一下以解除浏览器的自动播放限制</p>
+          </div>
+        </section>
+
+        <aside class="side">
+          <div class="panel">
+            <h3>影片</h3>
+            <select id="movie-select"></select>
+            <button id="load-movie">加载并同步给对方</button>
+          </div>
+          <div class="panel chat-panel">
+            <h3>聊天</h3>
+            <div id="chat" class="chat"></div>
+            <form id="chat-form">
+              <input id="chat-input" placeholder="说点什么…" maxlength="500" autocomplete="off" />
+              <button>发送</button>
+            </form>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/player.js"></script>
+  </body>
+</html>
