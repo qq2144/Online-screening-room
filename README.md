@@ -142,6 +142,57 @@ Caddy 会自动申请并续期 Let's Encrypt 证书。
 
 ---
 
+## 上传/播放慢怎么办
+
+自建流媒体最常见的瓶颈是**网络**，不是代码。排查顺序建议：
+
+### 1. 先跑诊断脚本
+
+```bash
+bash scripts/diagnose.sh
+```
+
+会告诉你：当前用的 TCP 拥塞控制算法、VPS 出口速度粗测、`media/` 里每部
+电影的实际码率。
+
+### 2. 开启 BBR（免费，最容易见效）
+
+如果诊断脚本显示拥塞控制算法不是 `bbr`，且可用列表里有 `bbr`，开一下：
+
+```bash
+echo "net.core.default_qdisc=fq" | sudo tee -a /etc/sysctl.conf
+echo "net.ipv4.tcp_congestion_control=bbr" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+sysctl net.ipv4.tcp_congestion_control   # 确认已经是 bbr
+```
+
+BBR 对高延迟/跨运营商/跨境这类链路提升明显，尤其是你们俩不在同一个
+网络环境访问的时候。
+
+### 3. 检查电影码率，太高就转码降一下
+
+诊断脚本会列出每部电影的码率。原盘/未压缩视频常见 20-40Mbps，这对大多数
+VPS 出口带宽来说太高了。降到合理码率画质损失很小：
+
+```bash
+ffmpeg -i 电影.mp4 -c:v libx264 -crf 22 -preset slow -c:a aac -b:a 128k \
+  -movflags +faststart 电影_压缩版.mp4
+```
+
+`-crf 22` 大致对应 1080p 下 2-6Mbps，肉眼画质差别很小，但需要的带宽降低
+一大截。`-preset slow` 转码更慢但压得更好；赶时间可以用 `medium` 或 `fast`。
+
+### 4. 如果前三步都不够，再考虑
+
+- **升级 VPS 公网带宽** — 阿里云控制台直接改，立即生效，最直接但要花钱。
+- **自适应码率（HLS/DASH）** — 转出多档码率，弱网自动降级不卡顿，但要
+  重做转码流水线和前端播放器，工程量明显更大，等前面几步都试过还不够
+  用再考虑。
+- **接 CDN/对象存储** — 播放走就近节点，效果最好，但两人用有点大材小用，
+  一般不需要。
+
+---
+
 ## 目录结构
 
 ```
@@ -153,6 +204,8 @@ Caddy 会自动申请并续期 Let's Encrypt 证书。
 │  ├─ player.js     # 播放器 + 同步逻辑
 │  └─ style.css
 ├─ media/           # 放电影（不提交进 git）
+├─ scripts/
+│  └─ diagnose.sh   # 网络/码率诊断脚本
 └─ ecosystem.config.cjs  # PM2 配置
 ```
 
