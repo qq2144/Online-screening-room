@@ -47,6 +47,16 @@
             <select id="movie-select"></select>
             <button id="load-movie">加载并同步给对方</button>
           </div>
+          <div class="panel">
+            <h3>上传新影片</h3>
+            <input type="file" id="upload-file" accept=".mp4,.webm,.m4v,.mov" />
+            <button id="upload-btn" type="button">上传</button>
+            <div id="upload-progress-wrap" class="progress-wrap hidden">
+              <div id="upload-progress-bar" class="progress-bar"></div>
+            </div>
+            <p id="upload-status" class="upload-status"></p>
+            <p id="upload-hint" class="hint"></p>
+          </div>
           <div class="panel chat-panel">
             <h3>聊天</h3>
             <div id="chat" class="chat"></div>

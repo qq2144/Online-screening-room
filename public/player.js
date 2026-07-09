@@ -4,6 +4,8 @@ const $ = (id) => document.getElementById(id);
 const socket = io();
 let roomId = null;
 let selfName = null;
+let authPassword = null; // kept in memory only, reused as the upload auth header
+let uploadLimits = { maxUploadBytes: null, allowedExtensions: [] };
 
 // Guards against the echo loop: when we apply a remote command it triggers
 // the same video events we listen to, which would re-broadcast forever.
@@ -24,11 +26,13 @@ $('enter').addEventListener('click', () => {
     }
     selfName = name;
     roomId = room;
+    authPassword = password;
     $('room-label').textContent = room;
     $('gate').classList.add('hidden');
     $('app').classList.remove('hidden');
     updateMembers(res.members);
     loadMovieList();
+    loadUploadLimits();
     applyState(res.state);
   });
 });
@@ -71,6 +75,91 @@ function setMovie(movie) {
   video.src = '/media/' + encodeURIComponent(movie);
   $('overlay').classList.remove('hidden');
 }
+
+// ---- Upload ---------------------------------------------------------------
+async function loadUploadLimits() {
+  try {
+    const res = await fetch('/api/config');
+    uploadLimits = await res.json();
+    if (uploadLimits.maxUploadBytes) {
+      const gb = Math.floor(uploadLimits.maxUploadBytes / 1024 ** 3);
+      $('upload-hint').textContent =
+        `支持 ${uploadLimits.allowedExtensions.join(' / ')}，单文件最大 ${gb}GB`;
+    }
+  } catch {
+    // Non-fatal: server-side checks still apply even without client-side hints.
+  }
+}
+
+function setUploadStatus(text, isError) {
+  const el = $('upload-status');
+  el.textContent = text;
+  el.classList.toggle('error', !!isError);
+}
+
+$('upload-btn').addEventListener('click', () => {
+  const input = $('upload-file');
+  const file = input.files[0];
+  if (!file) {
+    setUploadStatus('请先选择一个文件', true);
+    return;
+  }
+
+  const ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
+  if (uploadLimits.allowedExtensions.length && !uploadLimits.allowedExtensions.includes(ext)) {
+    setUploadStatus(`不支持的格式，请使用：${uploadLimits.allowedExtensions.join(' / ')}`, true);
+    return;
+  }
+  if (uploadLimits.maxUploadBytes && file.size > uploadLimits.maxUploadBytes) {
+    const gb = Math.floor(uploadLimits.maxUploadBytes / 1024 ** 3);
+    setUploadStatus(`文件过大，超过 ${gb}GB 限制`, true);
+    return;
+  }
+
+  const form = new FormData();
+  form.append('movie', file);
+
+  const params = new URLSearchParams({ roomId: roomId || '', name: selfName || '' });
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', `/api/upload?${params.toString()}`);
+  xhr.setRequestHeader('X-Screening-Password', authPassword || '');
+
+  $('upload-btn').disabled = true;
+  $('upload-progress-wrap').classList.remove('hidden');
+  $('upload-progress-bar').style.width = '0%';
+  setUploadStatus('上传中… 0%');
+
+  xhr.upload.addEventListener('progress', (e) => {
+    if (!e.lengthComputable) return;
+    const pct = Math.round((e.loaded / e.total) * 100);
+    $('upload-progress-bar').style.width = pct + '%';
+    setUploadStatus(`上传中… ${pct}%`);
+  });
+
+  xhr.addEventListener('load', () => {
+    $('upload-btn').disabled = false;
+    let res = null;
+    try { res = JSON.parse(xhr.responseText); } catch { /* ignore */ }
+
+    if (xhr.status === 200 && res?.ok) {
+      setUploadStatus(`上传成功：${res.filename}`);
+      input.value = '';
+      loadMovieList();
+    } else {
+      setUploadStatus(res?.error || `上传失败（${xhr.status}）`, true);
+    }
+    setTimeout(() => $('upload-progress-wrap').classList.add('hidden'), 1500);
+  });
+
+  xhr.addEventListener('error', () => {
+    $('upload-btn').disabled = false;
+    setUploadStatus('网络错误，上传失败', true);
+  });
+
+  xhr.send(form);
+});
+
+socket.on('movies-updated', () => loadMovieList());
 
 // ---- Apply incoming state / commands ------------------------------------
 function applyState(state) {
