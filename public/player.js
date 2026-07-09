@@ -355,6 +355,38 @@ $('start-btn').addEventListener('click', () => {
   video.play().catch(() => {});
 });
 
+// The overlay must disappear the instant the video is actually playing,
+// no matter what triggered playback (the button above, a synced 'control'/
+// 'sync' message, or a reconnect replaying state). Otherwise it's left
+// stuck on top of a playing video — looks broken and blocks taps on mobile.
+video.addEventListener('playing', () => {
+  $('overlay').classList.add('hidden');
+});
+
+// ---- Switch movie: header button + swipe-down gesture on the video --------
+// On mobile the movie list sits below the video, and getting to it used to
+// depend on the stuck-overlay bug above. This gives an explicit, always-
+// working way back regardless of overlay/fullscreen state.
+function goToMovieList() {
+  $('movie-list').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+$('switch-movie-btn').addEventListener('click', goToMovieList);
+
+const stage = document.querySelector('.stage');
+let touchStartY = null;
+
+stage.addEventListener('touchstart', (e) => {
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+stage.addEventListener('touchend', (e) => {
+  if (touchStartY === null) return;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  touchStartY = null;
+  if (dy > 70) goToMovieList();
+}, { passive: true });
+
 // ---- Chat -------------------------------------------------------------------
 $('chat-form').addEventListener('submit', (e) => {
   e.preventDefault();

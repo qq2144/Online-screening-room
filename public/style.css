@@ -167,6 +167,16 @@ video { width: 100%; height: 100%; max-height: 100%; }
 .overlay button { font-size: 20px; padding: 16px 32px; border-radius: 999px; }
 .overlay p { color: #d8d3c8; font-size: 13px; }
 
+.swipe-hint {
+  display: none;
+  margin: 0;
+  padding: 8px 16px 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  background: var(--panel);
+}
+
 /* Roster sits right below the player, per request. */
 .roster {
   display: flex;
@@ -305,4 +315,9 @@ video { width: 100%; height: 100%; max-height: 100%; }
   .main { flex-direction: column; }
   .side { width: 100%; }
   .stage-col { min-height: 40vh; }
+  .swipe-hint { display: block; }
+  .brand { font-size: 14px; }
+  .header-actions { gap: 8px; }
+  .ghost-btn { padding: 6px 10px; font-size: 12px; }
+  .members { font-size: 12px; }
 }
