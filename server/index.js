@@ -6,7 +6,16 @@ import multer from 'multer';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { Server } from 'socket.io';
-import { getRoom, projectedTime, updateState, removeMember } from './rooms.js';
+import {
+  getRoom,
+  projectedTime,
+  updateState,
+  removeMember,
+  addMember,
+  roster,
+  allRooms,
+  clearMovieIfMatches,
+} from './rooms.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -192,6 +201,41 @@ app.post('/api/upload', requireUploadAuth, (req, res) => {
   });
 });
 
+// Delete a movie from the media directory. Shares the same password auth
+// (and brute-force lockout) as uploads, since both mutate shared storage.
+app.delete('/api/movies/:filename', requireUploadAuth, (req, res) => {
+  const name = sanitizeBaseName(req.params.filename);
+  const target = path.join(MEDIA_DIR, name);
+
+  // Defense in depth: the sanitized name should never resolve outside
+  // MEDIA_DIR, but double-check before touching the filesystem.
+  if (path.dirname(target) !== MEDIA_DIR) {
+    return res.status(400).json({ ok: false, error: '非法文件名' });
+  }
+  if (!fs.existsSync(target)) {
+    return res.status(404).json({ ok: false, error: '文件不存在' });
+  }
+
+  fs.unlinkSync(target);
+
+  // If any room was actively pointing at this movie, clear it so no one is
+  // left staring at a dead video src.
+  for (const room of allRooms()) {
+    if (clearMovieIfMatches(room, name)) {
+      io.to(room.id).emit('movie-deleted', { filename: name });
+    }
+  }
+
+  const roomId = (req.query.roomId || '').toString();
+  const actorName = (req.query.name || '有人').toString().slice(0, 24);
+  if (roomId) {
+    io.to(roomId).emit('movies-updated');
+    io.to(roomId).emit('system', { text: `${actorName} 删除了影片：${name}` });
+  }
+
+  res.json({ ok: true });
+});
+
 // ---- Realtime sync -------------------------------------------------------
 io.on('connection', (socket) => {
   let joinedRoom = null;
@@ -206,7 +250,7 @@ io.on('connection', (socket) => {
     socket.data.name = (name || '匿名').slice(0, 24);
 
     const room = getRoom(roomId);
-    room.members.add(socket.id);
+    addMember(room, socket.id, socket.data.name);
     socket.join(roomId);
 
     // Send the newcomer the current playback state so they land in sync.
@@ -217,13 +261,11 @@ io.on('connection', (socket) => {
         isPlaying: room.isPlaying,
         currentTime: projectedTime(room),
       },
-      members: room.members.size,
+      roster: roster(room),
     });
 
-    io.to(roomId).emit('system', {
-      text: `${socket.data.name} 进入了房间`,
-      members: room.members.size,
-    });
+    io.to(roomId).emit('system', { text: `${socket.data.name} 进入了房间` });
+    io.to(roomId).emit('roster', roster(room));
   });
 
   // Playback control from one client -> broadcast to the other.
@@ -257,10 +299,11 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     if (!joinedRoom) return;
-    removeMember(joinedRoom, socket.id);
+    const room = removeMember(joinedRoom, socket.id);
     io.to(joinedRoom).emit('system', {
       text: `${socket.data.name || '有人'} 离开了房间`,
     });
+    if (room) io.to(joinedRoom).emit('roster', roster(room));
   });
 });
 

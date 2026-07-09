@@ -11,16 +11,21 @@
     <div id="gate" class="gate">
       <div class="gate-card">
         <h1>🎬 私人放映厅</h1>
-        <label>你的昵称
-          <input id="name" placeholder="比如：宝贝" maxlength="24" />
-        </label>
-        <label>房间号
-          <input id="room" placeholder="两人约定同一个房间号" value="us" />
-        </label>
-        <label>密码
-          <input id="password" type="password" placeholder="进入密码" />
-        </label>
-        <button id="enter">进入放映厅</button>
+
+        <div id="gate-form">
+          <label>你的昵称
+            <input id="name" placeholder="比如：宝贝" maxlength="24" autocomplete="off" />
+          </label>
+          <label>房间号
+            <input id="room" placeholder="两人约定同一个房间号" value="us" autocomplete="off" />
+          </label>
+          <label>密码
+            <input id="password" type="password" placeholder="进入密码" autocomplete="off" />
+          </label>
+          <button id="enter">进入放映厅</button>
+        </div>
+
+        <p id="gate-loading" class="gate-loading hidden">正在自动登录…</p>
         <p id="gate-error" class="error"></p>
       </div>
     </div>
@@ -29,24 +34,34 @@
     <div id="app" class="app hidden">
       <header>
         <span class="brand">🎬 放映厅 · <span id="room-label"></span></span>
-        <span id="members" class="members"></span>
+        <div class="header-actions">
+          <span id="members" class="members"></span>
+          <button id="logout-btn" class="ghost-btn" type="button">退出登录</button>
+        </div>
       </header>
 
       <div class="main">
-        <section class="stage">
-          <video id="video" controls playsinline></video>
-          <div id="overlay" class="overlay hidden">
-            <button id="start-btn">▶ 一起开始</button>
-            <p>点一下以解除浏览器的自动播放限制</p>
-          </div>
-        </section>
+        <div class="stage-col">
+          <section class="stage">
+            <video id="video" controls playsinline></video>
+            <div id="overlay" class="overlay hidden">
+              <button id="start-btn">▶ 一起开始</button>
+              <p>点一下以解除浏览器的自动播放限制</p>
+            </div>
+          </section>
+
+          <div id="roster" class="roster" aria-label="在线成员"></div>
+        </div>
 
         <aside class="side">
           <div class="panel">
-            <h3>影片</h3>
-            <select id="movie-select"></select>
-            <button id="load-movie">加载并同步给对方</button>
+            <div class="panel-head">
+              <h3>影片</h3>
+              <button id="refresh-movies" class="icon-btn" type="button" title="刷新片单">⟳</button>
+            </div>
+            <ul id="movie-list" class="movie-list"></ul>
           </div>
+
           <div class="panel">
             <h3>上传新影片</h3>
             <input type="file" id="upload-file" accept=".mp4,.webm,.m4v,.mov" />
@@ -57,6 +72,7 @@
             <p id="upload-status" class="upload-status"></p>
             <p id="upload-hint" class="hint"></p>
           </div>
+
           <div class="panel chat-panel">
             <h3>聊天</h3>
             <div id="chat" class="chat"></div>
