@@ -9,8 +9,6 @@
 - 网页直接上传电影（带进度条），不用再手动 scp
 - 附带影片列表和文字聊天
 
-你的 VPS: ``
-
 ---
 
 ## 在 VPS 上部署
@@ -54,7 +52,7 @@ export MAX_UPLOAD_GB=50   # 想改上限就设置这个，默认 30
 **上传方式二：scp（大文件/网络不稳定时更可靠）**
 
 ```bash
-scp "我的电影.mp4" root@REDACTED_IP:~/screening-room/media/
+scp "我的电影.mp4" root@<你的VPS_IP>:~/screening-room/media/
 ```
 
 > 网页上传是单次 HTTP 请求，没有断点续传。电影很大 (10GB+) 又是移动网络/
@@ -86,7 +84,7 @@ pm2 startup   # 按提示执行它输出的那行命令
 你和女友都打开：
 
 ```
-http://REDACTED_IP:3000
+http://<你的VPS_IP>:3000
 ```
 
 输入**相同的房间号**和**密码**，选一部片子点「加载并同步给对方」，
@@ -100,7 +98,7 @@ http://REDACTED_IP:3000
 - 浏览器可能提示「不安全」
 - 没有加密，同一网络里理论上能被看到
 
-**等你买了域名**（把域名 A 记录指向 `REDACTED_IP`），换成 Caddy 一步搞定
+**等你买了域名**（把域名 A 记录指向你的 VPS IP），换成 Caddy 一步搞定
 免费 HTTPS。届时告诉我域名，我给你补一个 `Caddyfile`，大致是：
 
 ```
