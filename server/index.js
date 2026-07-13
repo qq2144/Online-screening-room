@@ -23,8 +23,15 @@ const MEDIA_DIR = path.join(ROOT, 'media');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 
 const PORT = process.env.PORT || 3000;
-// Shared password for entering a room. Change this before going live.
-const PASSWORD = process.env.SCREENING_PASSWORD || 'love';
+
+// 共享密码必须通过环境变量设置，禁止硬编码默认值
+const PASSWORD = process.env.SCREENING_PASSWORD;
+if (!PASSWORD || PASSWORD.trim().length === 0) {
+  throw new Error(
+    '环境变量 SCREENING_PASSWORD 必须设置且不能为空字符串。' +
+    '示例: SCREENING_PASSWORD=your-secret-password npm start'
+  );
+}
 
 const VIDEO_EXT = new Set(['.mp4', '.webm', '.m4v', '.mov']);
 
